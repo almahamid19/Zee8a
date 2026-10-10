@@ -1,0 +1,22 @@
+{
+  "name": "zee8a",
+  "version": "1.0.0",
+  "description": "Honest dynamic QR code SaaS: free static codes forever, paid editable codes with scan analytics.",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^5.3.0",
+    "qrcode": "^1.5.4",
+    "stripe": "^23.0.0"
+  }
+}
