@@ -39,7 +39,7 @@ The code is the easy part. Revenue comes from distribution. The math:
 
 At a typical 1–3% visitor→paid conversion for tool sites, that's roughly **40–100K monthly visitors**. Realistically that takes 6–18 months of consistent work. Nothing here guarantees it.
 
-1. **SEO pages (the main channel).** "QR code generator" plus long-tail terms get enormous search volume. Add one page per use case, each with the generator embedded: *QR code for restaurant menu*, *for Wi-Fi*, *for business cards*, *for Google reviews*, *for PDFs*, *for Instagram*, and so on.
+1. **SEO pages (the main channel).** "QR code generator" and long-tail terms get enormous search volume. Eight use-case pages are built, each with the generator embedded, unique copy and FAQ rich-result markup: restaurant menu, Wi-Fi, Google reviews, business cards, PDF, Instagram, real estate and flyers (`src/landing.js`, served at `/qr-code/<slug>`, listed in `/sitemap.xml`). On launch day, submit the sitemap in Google Search Console. After that, add a page to `src/landing.js` for every new search term you find (event tickets, product packaging, wedding RSVPs, and so on).
 2. **Target the people who pay:** restaurants, real estate agents, event organizers, packaging and print shops, marketing agencies. Cold outreach, local Facebook groups, and partnering with print shops for referrals.
 3. **Launch posts:** Product Hunt, Indie Hackers, and r/SideProject. The "we'll never hold your printed codes hostage" angle is a strong story.
 4. **Grow ARPU over time:** annual plans (2 months free), custom domains, logo-in-QR, team seats, and bulk CSV creation for the Business tier.

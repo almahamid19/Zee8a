@@ -6,12 +6,24 @@ if (input) {
   const preview = document.getElementById('qr-preview');
   const png = document.getElementById('dl-png');
   const svg = document.getElementById('dl-svg');
+  const wifi = document.querySelector('.generator[data-mode="wifi"]');
   let timer;
 
+  // Special characters must be backslash-escaped in the WIFI: payload format.
+  const wifiEscape = (value) => value.replace(/([\\;,:"])/g, '\\$1');
+  const wifiPayload = () => {
+    const ssid = document.getElementById('wifi-ssid').value;
+    if (!ssid) return '';
+    const type = document.getElementById('wifi-type').value;
+    const pass = type === 'nopass' ? '' : document.getElementById('wifi-pass').value;
+    return `WIFI:T:${type};S:${wifiEscape(ssid)};P:${wifiEscape(pass)};;`;
+  };
+
   const render = () => {
+    if (wifi) input.value = wifiPayload();
     const data = input.value.trim();
     if (!data) {
-      preview.textContent = 'Type something to generate a code.';
+      preview.textContent = wifi ? 'Enter your network name to generate a code.' : 'Type something to generate a code.';
       return;
     }
     const params = new URLSearchParams({ data, fg: fg.value.slice(1), bg: bg.value.slice(1) });
@@ -25,7 +37,8 @@ if (input) {
     png.href = `${src}&format=png`;
   };
 
-  for (const el of [input, fg, bg]) {
+  const fields = wifi ? wifi.querySelectorAll('input, select') : [input, fg, bg];
+  for (const el of fields) {
     el.addEventListener('input', () => {
       clearTimeout(timer);
       timer = setTimeout(render, 200);

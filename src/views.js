@@ -1,8 +1,9 @@
 import { config } from './config.js';
+import { LANDING_PAGES } from './landing.js';
 import { PLANS } from './plans.js';
 import { escapeHtml as e } from './util.js';
 
-export function layout({ title, user, body, description }) {
+export function layout({ title, user, body, description, path, head = '', noindex = false }) {
   const desc = description || 'Free QR code generator. Static codes free forever, no sign-up. Editable dynamic QR codes with scan analytics from $9/month.';
   return `<!doctype html>
 <html lang="en">
@@ -11,8 +12,11 @@ export function layout({ title, user, body, description }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${e(title)} · ${e(config.brand)}</title>
 <meta name="description" content="${e(desc)}">
-<link rel="canonical" href="${e(config.baseUrl)}">
+${path ? `<link rel="canonical" href="${e(config.baseUrl + path)}">` : ''}
+${noindex ? '<meta name="robots" content="noindex">' : ''}
+${head}
 <link rel="stylesheet" href="/styles.css">
+<script src="/app.js" defer></script>
 </head>
 <body>
 <header class="nav">
@@ -28,6 +32,7 @@ export function layout({ title, user, body, description }) {
 <main>${body}</main>
 <footer class="foot">
   <span>© ${new Date().getFullYear()} ${e(config.brand)}</span>
+  <a href="/qr-code">QR code uses</a>
   <a href="/privacy">Privacy</a>
   <a href="/terms">Terms</a>
 </footer>
@@ -59,17 +64,22 @@ function pricingCards(user) {
   }).join('');
 }
 
-export function homePage(user) {
-  return layout({
-    title: 'Free QR Code Generator — no sign-up, no expiry',
-    user,
-    body: `
-<section class="hero">
-  <h1>QR codes that never expire.<br><span class="accent">Editable when you need them.</span></h1>
-  <p class="lead">Make a QR code in seconds — free, no account, no watermark, no trial that breaks your printed menus later.</p>
-  <div class="generator card">
-    <label for="qr-data">Website, text, or anything</label>
-    <input id="qr-data" type="text" value="https://example.com" maxlength="1000" autocomplete="off">
+// The free static generator, wired up by public/app.js. In "wifi" mode the
+// payload is assembled client-side from network fields and never sent to be stored.
+function generatorCard({ label = 'Website, text, or anything', placeholder = 'https://example.com', mode = 'text' } = {}) {
+  const input = mode === 'wifi'
+    ? `<div class="stack">
+        <label>Network name (SSID) <input id="wifi-ssid" type="text" maxlength="32" autocomplete="off" placeholder="MyCafe-Guest"></label>
+        <label>Password <input id="wifi-pass" type="text" maxlength="63" autocomplete="off" placeholder="Leave empty for open networks"></label>
+        <label>Security
+          <select id="wifi-type"><option value="WPA">WPA/WPA2/WPA3</option><option value="WEP">WEP</option><option value="nopass">None (open)</option></select>
+        </label>
+        <input id="qr-data" type="hidden">
+      </div>`
+    : `<label for="qr-data">${e(label)}</label>
+       <input id="qr-data" type="text" value="${e(placeholder)}" maxlength="1000" autocomplete="off">`;
+  return `<div class="generator card" data-mode="${mode}">
+    ${input}
     <div class="row">
       <label>Color <input id="qr-fg" type="color" value="#111827"></label>
       <label>Background <input id="qr-bg" type="color" value="#ffffff"></label>
@@ -79,13 +89,109 @@ export function homePage(user) {
       <a id="dl-png" class="btn" download="qr-code.png">Download PNG</a>
       <a id="dl-svg" class="btn ghost" download="qr-code.svg">Download SVG</a>
     </div>
+  </div>`;
+}
+
+function useLinks(exclude = '') {
+  return `<ul class="uses-grid">${LANDING_PAGES.filter((p) => p.slug !== exclude).map((p) =>
+    `<li><a href="/qr-code/${p.slug}">${e(p.h1)}</a></li>`).join('')}</ul>`;
+}
+
+// JSON-LD must not contain a raw "<" or the "</script>" sequence could break out.
+function jsonLd(data) {
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+}
+
+export function landingPage(page, user) {
+  const path = `/qr-code/${page.slug}`;
+  const head = jsonLd({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: page.faqs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+  });
+  return layout({
+    title: page.title,
+    description: page.description,
+    user,
+    path,
+    head,
+    body: `
+<nav class="crumbs small"><a href="/">Home</a> › <a href="/qr-code">QR code uses</a> › ${e(page.h1)}</nav>
+<section class="hero">
+  <h1>${e(page.h1)}</h1>
+  <p class="lead">${e(page.intro)}</p>
+  ${generatorCard(page)}
+  <p class="muted small center">Free forever. No sign-up, no watermark, no expiry.</p>
+</section>
+
+<section class="grid2">
+  <div class="card">
+    <h2 class="left">How to do it</h2>
+    <ol>${page.steps.map((s) => `<li>${e(s)}</li>`).join('')}</ol>
   </div>
+  <div class="card">
+    <h2 class="left">Tips</h2>
+    <ul>${page.tips.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+  </div>
+</section>
+
+${page.dynamicPitch ? `<section class="card upsell-card">
+  <h2 class="left">Need to change it after printing?</h2>
+  <p>${e(page.dynamicPitch)}</p>
+  <a class="btn" href="${user ? '/dashboard' : '/signup'}">Try a dynamic code free</a>
+  <a class="link-pad" href="/#pricing">See pricing</a>
+</section>` : ''}
+
+<section class="faq">
+  <h2>FAQ</h2>
+  ${page.faqs.map(([q, a]) => `<details><summary>${e(q)}</summary><p>${e(a)}</p></details>`).join('')}
+</section>
+
+<section class="uses">
+  <h2>More QR code ideas</h2>
+  ${useLinks(page.slug)}
+</section>`,
+  });
+}
+
+export function usesIndexPage(user) {
+  return layout({
+    title: 'QR Code Ideas & Uses — free generators for every need',
+    description: 'Free QR code generators for restaurant menus, WiFi, Google reviews, business cards, PDFs, Instagram, real estate and flyers.',
+    user,
+    path: '/qr-code',
+    body: `
+<section class="hero">
+  <h1>A free QR code for every use</h1>
+  <p class="lead">Pick what you're making a code for. Each page has a ready-to-use generator and tips to make it scan reliably.</p>
+</section>
+<section class="features">
+  ${LANDING_PAGES.map((p) => `<a class="card use-card" href="/qr-code/${p.slug}"><h3>${e(p.h1)}</h3><p class="muted">${e(p.description)}</p></a>`).join('')}
+</section>`,
+  });
+}
+
+export function homePage(user) {
+  return layout({
+    title: 'Free QR Code Generator — no sign-up, no expiry',
+    user,
+    path: '/',
+    body: `
+<section class="hero">
+  <h1>QR codes that never expire.<br><span class="accent">Editable when you need them.</span></h1>
+  <p class="lead">Make a QR code in seconds — free, no account, no watermark, no trial that breaks your printed menus later.</p>
+  ${generatorCard()}
 </section>
 
 <section class="features">
   <div class="card"><h3>Static: free forever</h3><p>The link is baked into the code. It works as long as the destination exists — we can't turn it off, and we never will try.</p></div>
   <div class="card"><h3>Dynamic: change it after printing</h3><p>Printed 5,000 flyers with a typo in the URL? Update the destination in your dashboard; the printed code keeps working.</p></div>
   <div class="card"><h3>Know what's working</h3><p>See scans per day, device type and country for every dynamic code. No personal data or IP addresses stored.</p></div>
+</section>
+
+<section class="uses">
+  <h2>Popular uses</h2>
+  ${useLinks()}
 </section>
 
 <section id="pricing" class="pricing">
@@ -100,8 +206,7 @@ export function homePage(user) {
   <details><summary>What's the difference between static and dynamic?</summary><p>A dynamic code points to a short link on our domain, which redirects to your destination. That lets you change the destination and count scans without reprinting.</p></details>
   <details><summary>What happens to my dynamic codes if I cancel?</summary><p>They keep redirecting. You'll be on the Free plan, so you can't create new dynamic codes beyond its limit or edit codes over the limit until you upgrade again.</p></details>
   <details><summary>Can I use the codes commercially?</summary><p>Yes — on menus, packaging, business cards, posters, anything.</p></details>
-</section>
-<script src="/app.js" defer></script>`,
+</section>`,
   });
 }
 
@@ -109,6 +214,7 @@ export function authPage({ mode, error, email = '', plan = '' }) {
   const isSignup = mode === 'signup';
   return layout({
     title: isSignup ? 'Create your account' : 'Log in',
+    noindex: true,
     body: `
 <section class="narrow card">
   <h1>${isSignup ? 'Create your account' : 'Welcome back'}</h1>

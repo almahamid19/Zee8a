@@ -77,3 +77,16 @@ label { display: block; font-weight: 600; }
 .bar { height: 100%; display: flex; align-items: end; }
 .bar span { display: block; width: 100%; min-height: 2px; background: var(--accent); border-radius: 3px 3px 0 0; }
 @media (max-width: 640px) { .table .url { display: none; } }
+.uses { margin: 32px 0; }
+.uses-grid { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.uses-grid a { display: block; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; text-decoration: none; }
+.use-card { text-decoration: none; color: var(--text); margin: 0; }
+.use-card:hover, .uses-grid a:hover { border-color: var(--accent); }
+.crumbs { color: var(--muted); margin-top: 16px; }
+.crumbs a { color: var(--muted); }
+h2.left { text-align: left; font-size: 1.3rem; margin-top: 0; }
+.grid2 ol, .grid2 ul { padding-left: 20px; }
+.grid2 li { margin: 6px 0; }
+.upsell-card { border: 2px solid var(--accent); }
+.link-pad { margin-left: 16px; }
+select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; font: inherit; background: var(--bg); color: var(--text); margin-top: 4px; display: block; }

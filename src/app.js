@@ -1,12 +1,14 @@
 import express from 'express';
 import QRCode from 'qrcode';
+import { LANDING_BY_SLUG, LANDING_PAGES } from './landing.js';
 import { PLANS, planFor } from './plans.js';
 import {
   HEX_COLOR, deviceFromUserAgent, hashPassword, isValidEmail, newSlug, newToken,
   normalizeTargetUrl, parseCookies, rateLimit, verifyPassword,
 } from './util.js';
 import {
-  authPage, codePage, dashboardPage, homePage, messagePage, privacyPage, termsPage,
+  authPage, codePage, dashboardPage, homePage, landingPage, messagePage, privacyPage, termsPage,
+  usesIndexPage,
 } from './views.js';
 
 const SESSION_DAYS = 30;
@@ -132,6 +134,35 @@ export function createApp({ db, config, stripe = null }) {
   app.get('/', (req, res) => res.send(homePage(req.user)));
   app.get('/privacy', (req, res) => res.send(privacyPage(req.user)));
   app.get('/terms', (req, res) => res.send(termsPage(req.user)));
+  app.get('/qr-code', (req, res) => res.send(usesIndexPage(req.user)));
+  app.get('/qr-code/:slug', (req, res, next) => {
+    const page = LANDING_BY_SLUG.get(req.params.slug);
+    if (!page) return next();
+    res.send(landingPage(page, req.user));
+  });
+
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send([
+      'User-agent: *',
+      'Disallow: /dashboard',
+      'Disallow: /codes/',
+      'Disallow: /billing/',
+      'Disallow: /r/',
+      'Disallow: /api/',
+      `Sitemap: ${config.baseUrl}/sitemap.xml`,
+      '',
+    ].join('\n'));
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    const paths = ['/', '/qr-code', ...LANDING_PAGES.map((p) => `/qr-code/${p.slug}`), '/privacy', '/terms'];
+    res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${paths.map((p) => `  <url><loc>${config.baseUrl}${p}</loc></url>`).join('\n')}
+</urlset>
+`);
+  });
+
   app.get('/healthz', (req, res) => res.json({ ok: true }));
 
   // Free static QR codes: the payload is encoded directly, nothing is stored.
